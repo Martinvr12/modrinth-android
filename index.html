@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16181c">
+<meta name="description" content="Unofficial fan-made Modrinth client for Android. Browse mods, modpacks, plugins, resource packs and shaders.">
+<link rel="manifest" href="manifest.json">
+<title>Modrinth Android</title>
+<style>
+:root{--bg:#16181c;--card:#1e2126;--text:#eaeaea;--muted:#8d949e;--accent:#1bd96a;--accent-dark:#06210f;--border:#2c3036;--chip:#262a30}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+header{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);border-bottom:1px solid var(--border);padding:12px 14px;z-index:5}
+.title{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.title h1{font-size:19px;margin:0;color:var(--accent)}
+.title small{color:var(--muted);font-size:11px}
+input[type=search]{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:16px;outline:none}
+input[type=search]:focus{border-color:var(--accent)}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:2px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:6px 12px;border-radius:999px;background:var(--chip);color:var(--muted);border:1px solid transparent;font-size:13px;cursor:pointer}
+.chip.on{background:var(--accent);color:var(--accent-dark);font-weight:600}
+main{padding:12px 14px 40px}
+.grid{display:grid;gap:10px}
+.card{display:flex;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;cursor:pointer}
+.card:active{opacity:.8}
+.icon{width:56px;height:56px;border-radius:10px;background:var(--chip);flex:0 0 56px;object-fit:cover}
+.info{min-width:0;flex:1}
+.name{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.desc{color:var(--muted);font-size:13px;margin:3px 0 6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.meta{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:block;width:100%;padding:12px;border-radius:10px;border:none;background:var(--accent);color:var(--accent-dark);font-weight:700;font-size:15px;text-align:center;cursor:pointer;margin-top:10px}
+.btn:disabled{opacity:.6}
+.btn.ghost{background:var(--chip);color:var(--text);font-weight:500}
+.status{color:var(--muted);text-align:center;padding:24px 0}
+.hidden{display:none!important}
+.back{background:none;border:none;color:var(--accent);font-size:15px;padding:6px 0;cursor:pointer}
+.hero{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.hero img{width:72px;height:72px;border-radius:14px;background:var(--chip);object-fit:cover}
+.hero h2{margin:0;font-size:20px}
+.hero p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:12px}
+.box h3{margin:0 0 8px;font-size:15px}
+.body{white-space:pre-wrap;word-wrap:break-word;color:#cfd3d8;font-size:13px;line-height:1.5;max-height:340px;overflow:auto}
+.srv-status{color:var(--muted);font-size:12px;margin-top:8px}
+.srv-status.ok{color:var(--text)}
+.srv-status .dot{color:var(--accent)}
+.srv-actions{display:flex;gap:8px;margin-top:10px}
+.srv-actions button{flex:1;padding:9px;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:pointer;background:var(--chip);color:var(--text)}
+.vname{font-weight:600;font-size:15px;word-break:break-word}
+.vsub{color:var(--muted);font-size:12px;margin-top:4px}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.tag{font-size:11px;padding:3px 8px;border-radius:6px;background:var(--chip);color:var(--text)}
+.tag.loader{background:#1bd96a1f;color:var(--accent)}
+.vrow{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
+
+/* Download dialog */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{width:100%;max-width:460px;max-height:88vh;background:var(--card);border:1px solid var(--border);border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
+.m-head{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.m-icon{width:40px;height:40px;border-radius:8px;background:var(--chip);object-fit:cover;flex:0 0 40px}
+.m-head h3{margin:0;font-size:17px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.close{background:var(--chip);border:none;color:var(--text);width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer;flex:0 0 32px}
+.m-body{padding:14px 16px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.selects{display:flex;gap:8px}
+.selects select{flex:1;min-width:0;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;outline:none}
+.selects select:focus{border-color:var(--accent)}
+.hint{color:var(--muted);font-size:13px;text-align:center;padding:14px 0}
+.vlist{display:flex;flex-direction:column;gap:8px}
+.vrow2{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px;cursor:pointer}
+.vrow2.sel{border-color:var(--accent)}
+.vinfo{flex:1;min-width:0}
+.vnum{font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px}
+.badge.release{background:#1bd96a33;color:var(--accent)}
+.badge.beta{background:#f5a52433;color:#f5a524}
+.badge.alpha{background:#f0505033;color:#f05050}
+.iconbtn{background:var(--chip);border:none;color:var(--text);width:36px;height:36px;border-radius:10px;font-size:16px;cursor:pointer;flex:0 0 36px}
+.iconbtn:disabled{opacity:.5}
+.sec-h{font-weight:700;margin-top:6px}
+.dep{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px}
+.dep img{width:32px;height:32px;border-radius:6px;background:var(--chip);object-fit:cover;flex:0 0 32px}
+.dep .dname{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dep .dsub{color:var(--muted);font-size:12px}
+.dep .dinfo{flex:1;min-width:0}
+.foot{display:flex;gap:8px;margin-top:6px}
+.foot button{flex:1;padding:12px;border-radius:10px;border:none;font-weight:700;font-size:14px;cursor:pointer}
+.foot .primary{background:var(--accent);color:var(--accent-dark)}
+.foot .secondary{background:var(--chip);color:var(--text)}
+.foot button:disabled{opacity:.6}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">
+    <h1>Modrinth Android</h1>
+    <small>Unofficial fan project</small>
+  </div>
+  <input id="q" type="search" placeholder="Search mods, plugins, modpacks..." autocomplete="off">
+  <div class="tabs" id="types">
+    <button class="chip on" data-type="mod">Mods</button>
+    <button class="chip" data-type="plugin">Plugins</button>
+    <button class="chip" data-type="modpack">Modpacks</button>
+    <button class="chip" data-type="resourcepack">Resource packs</button>
+    <button class="chip" data-type="shader">Shaders</button>
+    <button class="chip" data-type="datapack">Datapacks</button>
+    <button class="chip" data-type="servers">Servers</button>
+  </div>
+</header>
+
+<main>
+  <section id="listView">
+    <div class="grid" id="results"></div>
+    <div class="status" id="status"></div>
+    <button class="btn ghost hidden" id="more">Load more</button>
+  </section>
+
+  <section id="serversView" class="hidden">
+    <div class="box" style="margin-top:0"><h3>Featured servers</h3><div class="vsub">Source: PCGamesN, Minecraft server list 2026. Tap Copy IP, then paste it into Minecraft.</div></div>
+    <div class="vlist" id="serverList" style="margin-top:12px"></div>
+    <div class="status" id="serverEmpty"></div>
+    <button class="btn ghost" id="srvRefresh">Refresh status</button>
+  </section>
+
+  <section id="detailView" class="hidden">
+    <button class="back" id="back">Back to results</button>
+    <div id="detail"></div>
+  </section>
+</main>
+
+<div class="overlay hidden" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="m-head">
+      <img class="m-icon" id="mIcon" alt="" onerror="this.style.visibility='hidden'">
+      <h3 id="mTitle"></h3>
+      <button class="close" id="closeModal" aria-label="Close">✕</button>
+    </div>
+    <div class="m-body">
+      <div class="selects">
+        <select id="selGame" aria-label="Game version"></select>
+        <select id="selLoader" aria-label="Loader"></select>
+      </div>
+      <div id="verArea"></div>
+      <div id="depArea"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "https://api.modrinth.com/v2";
+const PAGE = 20;
+const LOADER_TYPES = ["mod", "modpack", "plugin"];
+const state = { type: "mod", q: "", offset: 0, total: 0, busy: false };
+const detail = { project: null, versions: [], selected: null, depRows: [] };
+let depToken = 0;
+const $ = id => document.getElementById(id);
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function fmt(n) {
+  n = Number(n) || 0;
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
+  return String(n);
+}
+function fmtSize(b) {
+  b = Number(b) || 0;
+  if (b >= 1048576) return (b / 1048576).toFixed(1) + " MiB";
+  if (b >= 1024) return (b / 1024).toFixed(2) + " KiB";
+  return b + " B";
+}
+function chanOf(v) { return v.version_type || "release"; }
+function primaryFile(v) { return (v.files || []).find(f => f.primary) || (v.files || [])[0]; }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+async function api(path) {
+  const r = await fetch(API + path, { headers: { Accept: "application/json" } });
+  if (!r.ok) throw new Error("Request failed (" + r.status + ")");
+  return r.json();
+}
+
+/* Search */
+async function search(reset) {
+  if (state.busy || state.type === "servers") return;
+  state.busy = true;
+  if (reset) {
+    state.offset = 0;
+    $("results").innerHTML = "";
+  }
+  $("status").textContent = "Loading...";
+  $("more").classList.add("hidden");
+  try {
+    const params = new URLSearchParams({
+      query: state.q,
+      facets: JSON.stringify([["project_type:" + state.type]]),
+      limit: String(PAGE),
+      offset: String(state.offset),
+      index: state.q ? "relevance" : "downloads"
+    });
+    const data = await api("/search?" + params.toString());
+    state.total = data.total_hits;
+    renderCards(data.hits);
+    state.offset += data.hits.length;
+    $("status").textContent = state.total ? "" : "No results found.";
+    if (state.offset < state.total) $("more").classList.remove("hidden");
+  } catch (e) {
+    $("status").textContent = "Could not load results. Check your connection.";
+  } finally {
+    state.busy = false;
+  }
+}
+function renderCards(hits) {
+  const html = hits.map(h => `
+    <div class="card" data-slug="${esc(h.slug)}">
+      <img class="icon" src="${esc(h.icon_url || "")}" alt="" onerror="this.style.visibility='hidden'">
+      <div class="info">
+        <div class="name">${esc(h.title)}</div>
+        <div class="desc">${esc(h.description)}</div>
+        <div class="meta"><span>⬇ ${fmt(h.downloads)}</span><span>♥ ${fmt(h.follows)}</span><span>${esc(h.author)}</span></div>
+      </div>
+    </div>`).join("");
+  $("results").insertAdjacentHTML("beforeend", html);
+}
+
+/* Project page */
+async function openProject(slug) {
+  closeModal();
+  $("listView").classList.add("hidden");
+  $("serversView").classList.add("hidden");
+  $("detailView").classList.remove("hidden");
+  window.scrollTo(0, 0);
+  $("detail").innerHTML = '<div class="status">Loading...</div>';
+  try {
+    const [p, versions] = await Promise.all([
+      api("/project/" + encodeURIComponent(slug)),
+      api("/project/" + encodeURIComponent(slug) + "/version")
+    ]);
+    detail.project = p;
+    detail.versions = versions;
+    renderDetail(p);
+  } catch (e) {
+    $("detail").innerHTML = '<div class="status">Could not load this project.</div>';
+  }
+}
+function renderDetail(p) {
+  $("detail").innerHTML = `
+    <div class="hero">
+      <img src="${esc(p.icon_url || "")}" alt="" onerror="this.style.visibility='hidden'">
+      <div>
+        <h2>${esc(p.title)}</h2>
+        <p>${esc(p.author ? "by " + p.author : "")} · ⬇ ${fmt(p.downloads)} · ♥ ${fmt(p.followers)}</p>
+      </div>
+    </div>
+    <p style="color:var(--muted);margin:0">${esc(p.description)}</p>
+    <button class="btn" id="openModal">Download</button>
+    <div class="box"><h3>Description</h3><div class="body">${esc((p.body || "").slice(0, 4000))}</div></div>`;
+}
+
+/* Download dialog */
+function openModal() {
+  const p = detail.project;
+  $("mIcon").src = p.icon_url || "";
+  $("mTitle").textContent = "Download " + p.title;
+
+  const games = [];
+  const loaders = [];
+  detail.versions.forEach(v => {
+    (v.game_versions || []).forEach(g => { if (!games.includes(g)) games.push(g); });
+    (v.loaders || []).forEach(l => { if (!loaders.includes(l)) loaders.push(l); });
+  });
+  $("selGame").innerHTML = '<option value="">Select game version</option>' +
+    games.map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
+  const showLoader = LOADER_TYPES.includes(p.project_type);
+  $("selLoader").classList.toggle("hidden", !showLoader);
+  $("selLoader").innerHTML = '<option value="">Select loader</option>' +
+    loaders.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join("");
+
+  $("selGame").value = "";
+  $("selLoader").value = "";
+  detail.selected = null;
+  detail.depRows = [];
+  $("depArea").innerHTML = "";
+  renderVersions();
+  $("overlay").classList.remove("hidden");
+}
+function closeModal() {
+  $("overlay").classList.add("hidden");
+  depToken++;
+}
+function selections() {
+  const showLoader = LOADER_TYPES.includes(detail.project.project_type);
+  return { game: $("selGame").value, loader: showLoader ? $("selLoader").value : "" };
+}
+function matching() {
+  const { game, loader } = selections();
+  return detail.versions.filter(v =>
+    (!game || (v.game_versions || []).includes(game)) &&
+    (!loader || (v.loaders || []).includes(loader))
+  );
+}
+function renderVersions() {
+  const { game, loader } = selections();
+  const showLoader = LOADER_TYPES.includes(detail.project.project_type);
+  if (!game || (showLoader && !loader)) {
+    $("verArea").innerHTML = '<div class="hint">' + (showLoader ? "Select a game version and a loader to see downloads." : "Select a game version to see downloads.") + "</div>";
+    $("depArea").innerHTML = "";
+    detail.selected = null;
+    return;
+  }
+  const list = matching();
+  if (!list.length) {
+    $("verArea").innerHTML = '<div class="hint">No versions match these choices.</div>';
+    $("depArea").innerHTML = "";
+    detail.selected = null;
+    return;
+  }
+  if (!list.includes(detail.selected)) detail.selected = list[0];
+  $("verArea").innerHTML = '<div class="vlist">' + list.slice(0, 20).map((v, i) => {
+    const file = primaryFile(v);
+    const date = v.date_published ? new Date(v.date_published).toLocaleDateString() : "";
+    const ch = chanOf(v);
+    const label = ch.charAt(0).toUpperCase() + ch.slice(1);
+    return `
+      <div class="vrow2 ${v === detail.selected ? "sel" : ""}" data-i="${i}">
+        <div class="vinfo">
+          <div class="vnum">${esc(v.version_number)} <span class="badge ${esc(ch)}">${label}</span></div>
+          <div class="vsub">${esc(date)}${file ? " · " + fmtSize(file.size) : ""}</div>
+        </div>
+        <button class="iconbtn dl-version" data-i="${i}" ${file ? "" : "disabled"} aria-label="Download">⬇</button>
+      </div>`;
+  }).join("") + "</div>";
+  loadDeps(detail.selected);
+}
+
+async function loadDeps(v) {
+  const token = ++depToken;
+  const { game, loader } = selections();
+  const deps = (v.dependencies || []).filter(d => d.dependency_type === "required");
+  if (!deps.length) {
+    detail.depRows = [];
+    $("depArea").innerHTML = '<div class="sec-h">Dependencies</div><div class="hint">No required dependencies.</div>' + footerHtml(false);
+    return;
+  }
+  $("depArea").innerHTML = '<div class="sec-h">Dependencies</div><div class="hint">Loading dependencies...</div>';
+  const ids = deps.filter(d => d.project_id).map(d => d.project_id);
+  let projects = [];
+  try {
+    if (ids.length) projects = await api("/projects?ids=" + encodeURIComponent(JSON.stringify(ids)));
+  } catch (e) {}
+
+  const rows = await Promise.all(deps.map(async d => {
+    const proj = projects.find(p => p.id === d.project_id) || null;
+    let ver = null;
+    try {
+      if (d.project_id) {
+        const q = new URLSearchParams();
+        if (game) q.set("game_versions", JSON.stringify([game]));
+        if (loader) q.set("loaders", JSON.stringify([loader]));
+        const list = await api("/project/" + d.project_id + "/version?" + q.toString());
+        ver = list[0] || null;
+      } else if (d.version_id) {
+        ver = await api("/version/" + d.version_id);
+      }
+    } catch (e) {}
+    return { proj, ver };
+  }));
+
+  if (token !== depToken) return;
+  detail.depRows = rows;
+  $("depArea").innerHTML = '<div class="sec-h">Dependencies</div><div class="vlist">' + rows.map((r, i) => {
+    const name = r.proj ? r.proj.title : (r.ver ? r.ver.name : "Dependency");
+    const icon = r.proj ? r.proj.icon_url : "";
+    const file = r.ver && primaryFile(r.ver);
+    const sub = r.ver ? esc(r.ver.version_number) : "No compatible version";
+    return `
+      <div class="dep">
+        <img src="${esc(icon || "")}" alt="" onerror="this.style.visibility='hidden'">
+        <div class="dinfo"><div class="dname">${esc(name)}</div><div class="dsub">${sub}</div></div>
+        <button class="iconbtn dl-dep" data-i="${i}" ${file ? "" : "disabled"} aria-label="Download dependency">⬇</button>
+      </div>`;
+  }).join("") + "</div>" + footerHtml(true);
+}
+function footerHtml(hasDeps) {
+  return `<div class="foot">
+    <button class="secondary" id="dlFile">Download file</button>
+    <button class="primary" id="dlAll" ${hasDeps ? "" : "disabled"}>Download with deps</button>
+  </div>`;
+}
+
+async function saveFile(file) {
+  const r = await fetch(file.url);
+  if (!r.ok) throw new Error("bad response");
+  const blob = await r.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = file.filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+async function downloadOne(btn, file) {
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Downloading...";
+  try {
+    await saveFile(file);
+    btn.textContent = "Saved";
+  } catch (e) {
+    window.open(file.url, "_blank");
+    btn.textContent = label;
+  } finally {
+    btn.disabled = false;
+  }
+}
+async function downloadWithDeps(btn) {
+  const files = [];
+  if (detail.selected && primaryFile(detail.selected)) files.push(primaryFile(detail.selected));
+  detail.depRows.forEach(r => { if (r.ver && primaryFile(r.ver)) files.push(primaryFile(r.ver)); });
+  if (!files.length) return;
+  const label = btn.textContent;
+  btn.disabled = true;
+  for (let i = 0; i < files.length; i++) {
+    btn.textContent = `Downloading ${i + 1} of ${files.length}...`;
+    try { await saveFile(files[i]); } catch (e) { window.open(files[i].url, "_blank"); }
+    await sleep(900);
+  }
+  btn.textContent = label;
+  btn.disabled = false;
+}
+
+/* Servers (fixed list from PCGamesN, live status from mcsrvstat.us) */
+const FEATURED = [
+  { address: "mc.hypixel.net", edition: "java" },
+  { address: "play.mccisland.net", edition: "java" },
+  { address: "hub.mc-complex.com", edition: "java" },
+  { address: "play.serenitymc.uk", edition: "java" },
+  { address: "play.verdux.net", edition: "java" }
+];
+function renderServers() {
+  const list = FEATURED;
+  $("serverEmpty").textContent = "";
+  $("serverList").innerHTML = list.map((s, i) => `
+    <div class="vrow">
+      <div class="vname">${esc(s.address)}</div>
+      <div class="tags"><span class="tag loader">${s.edition === "bedrock" ? "Bedrock" : "Java"}</span></div>
+      <div class="srv-status" id="srv-${i}">Checking...</div>
+      <div class="srv-actions"><button data-copy="${esc(s.address)}">Copy IP</button></div>
+    </div>`).join("");
+  list.forEach((s, i) => checkServer(s, $("srv-" + i)));
+}
+async function checkServer(s, el) {
+  if (!el) return;
+  try {
+    const base = s.edition === "bedrock" ? "https://api.mcsrvstat.us/bedrock/3/" : "https://api.mcsrvstat.us/3/";
+    const r = await fetch(base + encodeURI(s.address));
+    if (!r.ok) throw new Error("bad");
+    const d = await r.json();
+    if (d.online) {
+      const motd = (d.motd && d.motd.clean && d.motd.clean[0]) || "";
+      el.className = "srv-status ok";
+      el.innerHTML = `<span class="dot">●</span> Online · ${esc(d.players ? d.players.online : 0)}/${esc(d.players ? d.players.max : "?")} players · ${esc(d.version || "")}` +
+        (motd ? `<div>${esc(motd)}</div>` : "");
+    } else {
+      el.className = "srv-status";
+      el.textContent = "Offline";
+    }
+  } catch (e) {
+    el.className = "srv-status";
+    el.textContent = "Status unavailable";
+  }
+}
+
+/* Views */
+function showList() {
+  const srv = state.type === "servers";
+  $("listView").classList.toggle("hidden", srv);
+  $("serversView").classList.toggle("hidden", !srv);
+  $("detailView").classList.add("hidden");
+}
+function backToList() {
+  closeModal();
+  showList();
+}
+function route() {
+  const m = location.hash.match(/^#project\/(.+)$/);
+  if (m) openProject(decodeURIComponent(m[1]));
+  else backToList();
+}
+
+/* Events */
+let debounce;
+$("q").addEventListener("input", e => {
+  closeModal();
+  clearTimeout(debounce);
+  debounce = setTimeout(() => {
+    state.q = e.target.value.trim();
+    search(true);
+  }, 350);
+});
+$("types").addEventListener("click", e => {
+  const b = e.target.closest("[data-type]");
+  if (!b) return;
+  closeModal();
+  if (location.hash) location.hash = "";
+  document.querySelectorAll("#types .chip").forEach(c => c.classList.toggle("on", c === b));
+  state.type = b.dataset.type;
+  showList();
+  if (state.type === "servers") renderServers();
+  else search(true);
+});
+$("results").addEventListener("click", e => {
+  const card = e.target.closest("[data-slug]");
+  if (card) location.hash = "project/" + encodeURIComponent(card.dataset.slug);
+});
+$("more").addEventListener("click", () => search(false));
+$("back").addEventListener("click", () => { location.hash = ""; });
+$("detail").addEventListener("click", e => {
+  if (e.target.closest("#openModal")) openModal();
+});
+$("selGame").addEventListener("change", renderVersions);
+$("selLoader").addEventListener("change", renderVersions);
+$("verArea").addEventListener("click", e => {
+  const dl = e.target.closest(".dl-version");
+  const row = e.target.closest(".vrow2");
+  const list = matching();
+  if (dl) {
+    const v = list[Number(dl.dataset.i)];
+    const file = v && primaryFile(v);
+    if (file) downloadOne(dl, file);
+    return;
+  }
+  if (row) {
+    detail.selected = list[Number(row.dataset.i)];
+    renderVersions();
+  }
+});
+$("depArea").addEventListener("click", e => {
+  const dl = e.target.closest(".dl-dep");
+  if (dl) {
+    const r = detail.depRows[Number(dl.dataset.i)];
+    const file = r && r.ver && primaryFile(r.ver);
+    if (file) downloadOne(dl, file);
+    return;
+  }
+  const one = e.target.closest("#dlFile");
+  if (one) {
+    const file = detail.selected && primaryFile(detail.selected);
+    if (file) downloadOne(one, file);
+    return;
+  }
+  const all = e.target.closest("#dlAll");
+  if (all) downloadWithDeps(all);
+});
+$("serverList").addEventListener("click", e => {
+  const cp = e.target.closest("[data-copy]");
+  if (cp && navigator.clipboard) navigator.clipboard.writeText(cp.dataset.copy).catch(() => {});
+});
+$("srvRefresh").addEventListener("click", renderServers);
+$("closeModal").addEventListener("click", closeModal);
+$("overlay").addEventListener("click", e => {
+  if (e.target === $("overlay")) closeModal();
+});
+window.addEventListener("hashchange", route);
+
+search(true);
+route();
+</script>
+</body>
+</html>
